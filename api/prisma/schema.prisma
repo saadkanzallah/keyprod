@@ -10,19 +10,61 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  ADMIN
+  AGENT
+  USER
+}
+
+enum Category {
+  KEYNETIC
+  KEYVIBE
+}
+
 model User {
   id        String    @id  @default(cuid())
   email     String    @db.VarChar(255) @unique()
   password  String    @db.VarChar(255)
-  firstname String?   @db.VarChar(255)
-  lastname  String?   @db.VarChar(255)
+  firstname String    @db.VarChar(255)
+  lastname  String    @db.VarChar(255)
   role      Role      @default(USER)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt()
 }
 
-enum Role {
-  ADMIN
-  AGENT
-  USER
+model Product {
+  id        String    @id  @default(cuid())
+  category  Category
+  version   String    @db.VarChar(10)
+  code      String    @db.VarChar(50)
+  weight    Int
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt()
+  order     Order?    @relation(fields: [orderId], references: [id])
+  orderId   String?
+  parcel    Parcel?   @relation(fields: [parcelId], references: [id])
+  parcelId  String?
+}
+
+model Order {
+  id        String    @id  @default(cuid())
+  client    String    @db.VarChar(100)
+  code      String    @db.VarChar(50)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt()
+  products  Product[]
+  parcels   Parcel[]
+}
+
+model Parcel {
+  id        String    @id  @default(cuid())
+  code      String    @db.VarChar(50)
+  tracking  String    @db.VarChar(50)
+  label     String    @db.VarChar(100)
+  comment   String?   @db.Text()
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt()
+  order     Order     @relation(fields: [orderId], references: [id], onUpdate: Cascade, onDelete: Cascade)
+  orderId   String
+  products  Product[]
 }
