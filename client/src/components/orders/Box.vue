@@ -1,12 +1,14 @@
 <script setup>
 import { FilterMatchMode } from 'primevue/api';
 import { ref, computed, onMounted, onBeforeMount } from 'vue';
-import ProductService from '../../service/ProductService';
 import { useToast } from 'primevue/usetoast';
+import { useRoute } from 'vue-router';
+import OrderService from '../../service/OrderService';
 
 const toast = useToast();
 
 const producCode = ref(null);
+const order = ref(null);
 const products = ref([]);
 const productDialog = ref(false);
 const deleteProductDialog = ref(false);
@@ -24,13 +26,17 @@ const statuses = ref([
     { label: 'Livrée', value: 'outofstock' }
 ]);
 
-const productService = new ProductService();
+const orderService = new OrderService();
 
 onBeforeMount(() => {
     initFilters();
 });
 onMounted(() => {
-    productService.getProducts().then((data) => (products.value = data));
+    const route = useRoute();
+    orderService.getFullOrder(route.params.id).then((data) => {
+        order.value = data;
+        products.value = data.products ?? [];
+    });
 });
 const formatCurrency = (value) => {
     return value.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -40,8 +46,8 @@ const openNew = () => {
     submitted.value = false;
     productDialog.value = true;
     console.log(selectedProducts)
-    selectedProductsNames = selectedProducts.value.map((val) => val.name);
-    selectedProductsPoids = selectedProducts.value.map((val) => Number(val.id)).reduce((a, b) => a + b);
+    selectedProductsNames = selectedProducts.value.map((val) => val.code);
+    selectedProductsPoids = selectedProducts.value.map((val) => val.weight).reduce((a, b) => a + b);
     console.log(selectedProductsPoids)
 };
 const hideDialog = () => {
@@ -88,30 +94,14 @@ const saveProduct = () => {
         producCode.value = null;
     }
 };
-const createId = () => {
-    let id = '';
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    for (let i = 0; i < 5; i++) {
-        id += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return id;
-};
-const lastYearTotal = computed(() => {
+
+const thisWeightTotal = computed(() => {
     let total = 0;
     for(let product of products.value) {
-        total += product.price;
+        total += product.weight;
     }
 
-    return formatCurrency(total);
-});
-
-const thisYearTotal = computed(() => {
-    let total = 0;
-    for(let product of products.value) {
-        total += product.price;
-    }
-
-    return formatCurrency(total);
+    return total + ' KG';
 });
 
 const onRowSelect = (event) => {
@@ -126,8 +116,8 @@ const onRowSelect = (event) => {
     <div class="grid">
         <div class="col-12">
             <div class="card">
-                <h5>Affectation des produits de la commande #{{ $route.params.id }}</h5>
-                <h6>Client: <b>Client 1</b></h6>
+                <h5>Affectation des produits de la commande #{{ order?.code }}</h5>
+                <h6>Client: <b>{{ order?.client }}</b></h6>
                 <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
             </div>
         </div>
@@ -167,32 +157,31 @@ const onRowSelect = (event) => {
                             {{ data.code }}
                         </template>
                     </Column>
-                    <Column field="code" header="Catégorie" headerStyle="width:30%; min-width:10rem;">
+                    <Column field="category" header="Catégorie" headerStyle="width:20%; min-width:10rem;">
                         <template #body="{ data }">
-                            <img :src="'/demo/images/avatar/ionibowcher.png'" width="32" style="vertical-align: middle" />
-                            <span style="margin-left: 0.5em; vertical-align: middle" class="image-text">{{ data.name }}</span>
+                            <img :src="`/${data.category}.png`" width="64" style="vertical-align: middle" />
+                            <span style="margin-left: 0.5em; vertical-align: middle" class="image-text">{{ data.category }}</span>
                         </template>
                     </Column>
                     <Column field="code" header="Version" headerStyle="width:15%; min-width:10rem;">
                         <template #body="{ data }">
-                            V{{ Math.floor(Math.random()* 10) + 1 }}
+                            {{ data.version }}
                         </template>
                     </Column>
-                    <Column field="price" header="Montant" headerStyle="width:15%; min-width:8rem;">
+                    <Column field="ref" header="Référence" headerStyle="width:30%; min-width:10rem;">
                         <template #body="{ data }">
-                            {{ formatCurrency(data.price) }}
+                            {{ data.category + '_' + data.version + '_' + data.code}}
                         </template>
                     </Column>
                     <Column field="price" header="Poids" headerStyle="width:15%; min-width:8rem;">
                         <template #body="{ data }">
-                            {{ Math.floor(Math.random()* 10) + 1 }} KG
+                            {{ data.weight }} KG
                         </template>
                     </Column>
                     <ColumnGroup type="footer">
                         <Row>
-                            <Column footer="Totals:" :colspan="4" footerStyle="text-align:right" />
-                            <Column :footer="lastYearTotal" />
-                            <Column :footer="thisYearTotal" />
+                            <Column footer="Poids total:" :colspan="5" footerStyle="text-align:right" />
+                            <Column :footer="thisWeightTotal" />
                         </Row>
                     </ColumnGroup>
                 </DataTable>
