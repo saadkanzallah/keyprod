@@ -3,6 +3,7 @@ import { FilterMatchMode } from 'primevue/api';
 import { ref, computed, onMounted, onBeforeMount } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import OrderService from '../../service/OrderService';
+import ProductService from '../../service/ProductService';
 import { useRoute } from 'vue-router';
 
 const toast = useToast();
@@ -23,6 +24,7 @@ const statuses = ref([
 ]);
 
 const orderService = new OrderService();
+const productService = new ProductService();
 
 onBeforeMount(() => {
     initFilters();
@@ -60,22 +62,26 @@ const initFilters = () => {
     };
 };
 const searchProduct = () => {
-    if (producCode && producCode.value) {
-        if (producCode.value === 'saad') {
-            product.value.id = createId();
-            product.value.code = createId();
-            product.value.name = 'keyprod';
-            product.value.image = 'product-placeholder.svg';
-            product.value.inventoryStatus = product.value.inventoryStatus ? product.value.inventoryStatus.value : 'INSTOCK';
-            product.value.price = 100;
-            products.value.push(product.value);
-            toast.add({ severity: 'success', summary: 'Successful', detail: 'Product Created', life: 3000 });
-        } else {
-            toast.add({ severity: 'warn', summary: 'Error', detail: `Product ${producCode.value} Not found`, life: 3000 });
-        }
+    if (products.value.some(p => p.code === producCode.value)) {
+        toast.add({ severity: 'warn', summary: 'Warning', detail: `Product ${producCode.value} already exist in list`, life: 3000 });
         product.value = {};
         producCode.value = null;
+        return;
     }
+    productService.searchProduct(producCode.value)
+    .then((data) => {
+        product.value.id = createId();
+            product.value = data;
+            products.value.push(product.value);
+            toast.add({ severity: 'success', summary: 'Successful', detail: 'Product created', life: 3000 });
+    })
+    .catch(() => {
+        toast.add({ severity: 'error', summary: 'Error', detail: `Product ${producCode.value} not found`, life: 3000 });
+    })
+    .finally(() => {
+        product.value = {};
+        producCode.value = null;
+    });
 };
 const createId = () => {
     let id = '';
