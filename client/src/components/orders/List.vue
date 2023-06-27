@@ -119,7 +119,7 @@ const formatDate = (value) => {
                     <Column field="price" header="Nbr. de produits" :sortable="true" headerStyle="width:13%; min-width:8rem;">
                         <template #body="{ data }">
                             <span class="p-column-title">Nbr. de produits</span>
-                            {{ Math.floor(Math.random()* 10) + 1 }}
+                            {{ data.products.length }}
                         </template>
                     </Column>
                     <Column field="price" header="Nbr. de colis" :sortable="true" headerStyle="width:12%; min-width:8rem;">
