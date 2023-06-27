@@ -11,11 +11,11 @@ export class OrdersService {
   }
 
   findAll() {
-    return this.prisma.product.findMany();
+    return this.prisma.order.findMany();
   }
 
   findOne(id: string) {
-    return this.prisma.product.findUnique({where : { id }});
+    return this.prisma.order.findUnique({where : { id }});
   }
 
   update(id: number, updateOrderDto: UpdateOrderDto) {
