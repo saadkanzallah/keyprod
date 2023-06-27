@@ -1,63 +1,40 @@
 <script setup>
-import { FilterMatchMode, FilterOperator } from 'primevue/api';
-import CustomerService from '@/service/CustomerService';
-import { ref, onBeforeMount } from 'vue';
+import { FilterMatchMode } from 'primevue/api';
+import ParcelService from '../../service/ParcelService';
+import { ref, onBeforeMount, computed } from 'vue';
 
-const customer1 = ref(null);
-const filters1 = ref(null);
-const loading1 = ref(null);
+const parcels = ref(null);
+const filters = ref(null);
+const loading = ref(null);
 const product = ref({});
 const submitted = ref(false);
 const productDialog = ref(false);
 const statuses = ref(['unqualified', 'qualified', 'new', 'negotiation', 'renewal', 'proposal']);
-const representatives = ref([
-    { name: 'Amy Elsner', image: 'amyelsner.png' },
-    { name: 'Anna Fali', image: 'annafali.png' },
-    { name: 'Asiya Javayant', image: 'asiyajavayant.png' },
-    { name: 'Bernardo Dominic', image: 'bernardodominic.png' },
-    { name: 'Elwin Sharvill', image: 'elwinsharvill.png' },
-    { name: 'Ioni Bowcher', image: 'ionibowcher.png' },
-    { name: 'Ivan Magalhaes', image: 'ivanmagalhaes.png' },
-    { name: 'Onyama Limba', image: 'onyamalimba.png' },
-    { name: 'Stephen Shaw', image: 'stephenshaw.png' },
-    { name: 'XuXue Feng', image: 'xuxuefeng.png' }
-]);
 
-const customerService = new CustomerService();
+const parcelService = new ParcelService();
 
 onBeforeMount(() => {
-    customerService.getCustomersLarge().then((data) => {
-        customer1.value = data;
-        loading1.value = false;
-        customer1.value.forEach((customer) => (customer.date = new Date(customer.date)));
+    parcelService.getFullParcel().then((data) => {
+        console.log(data)
+        parcels.value = data;
+        loading.value = false;
     });
 
-    initFilters1();
+    initFilters();
 });
 
-const initFilters1 = () => {
-    filters1.value = {
-        global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-        name: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
-        'country.name': { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
-        representative: { value: null, matchMode: FilterMatchMode.IN },
-        date: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }] },
-        balance: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.EQUALS }] },
-        status: { operator: FilterOperator.OR, constraints: [{ value: null, matchMode: FilterMatchMode.EQUALS }] },
-        activity: { value: [0, 50], matchMode: FilterMatchMode.BETWEEN },
-        verified: { value: null, matchMode: FilterMatchMode.EQUALS }
+const initFilters = () => {
+    filters.value = {
+        global: { value: null, matchMode: FilterMatchMode.CONTAINS }
     };
 };
 
-const clearFilter1 = () => {
-    initFilters1();
-};
-const formatCurrency = (value) => {
-    return value.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+const clearFilter = () => {
+    initFilters();
 };
 
 const formatDate = (value) => {
-    return value.toLocaleDateString('en-US', {
+    return (new Date(value)).toLocaleDateString('fr-FR', {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric'
@@ -90,6 +67,15 @@ const saveProduct = () => {
         producCode.value = null;
     }
 };
+
+const thisWeightTotal = (products) => {
+    let total = 0;
+    for(let product of products) {
+        total += product.weight;
+    }
+
+    return total;
+};
 </script>
 
 <template>
@@ -98,69 +84,64 @@ const saveProduct = () => {
             <div class="card">
                 <h5>Liste des colis</h5>
                 <DataTable
-                    :value="customer1"
+                    :value="parcels"
                     :paginator="true"
                     class="p-datatable-gridlines"
                     :rows="10"
                     dataKey="id"
-                    v-model:filters="filters1"
-                    :loading="loading1"
+                    v-model:filters="filters"
+                    :loading="loading"
                     responsiveLayout="scroll"
                     :globalFilterFields="['name', 'country.name', 'representative.name', 'balance', 'status']"
                 >
-                    <template #header>
-                        <div class="flex justify-content-end">
-                            <span class="p-input-icon-left mb-2">
-                                <i class="pi pi-search" />
-                                <InputText v-model="filters1['global'].value" placeholder="Recherche" style="width: 100%" />
-                            </span>
-                        </div>
-                    </template>
+                    
                     <template #empty> No parcels found. </template>
                     <template #loading> Loading parcels data. Please wait. </template>
-                    <Column field="name" header="N° Colis" headerStyle="min-width:7rem;">
+                    <Column  filterField="code" header="N° Colis" headerStyle="min-width:7rem;">
                         <template #body="{ data }">
-                            {{ data.id }}
+                            #{{ data.code }}
                         </template>
                     </Column>
                     <Column field="name" header="N° Commande" headerStyle="width:10%; min-width:10rem;">
                         <template #body="{ data }">
-                            {{ data.id }}
+                            #{{ data.order.code }}
                         </template>
                     </Column>
                     <Column field="name" header="Libellé" headerStyle="width:30%; min-width:12rem;">
                         <template #body="{ data }">
-                            {{ data.name }}
+                            {{ data.label }}
                         </template>
                     </Column>
                     <Column field="name" header="Nbr. produits" headerStyle="width:10%; min-width:9rem;">
                         <template #body="{ data }">
-                            2
+                            {{ data.products.length }}
                         </template>
                     </Column>
                     <Column field="name" header="Poids" headerStyle="width:8%; min-width:6rem;">
                         <template #body="{ data }">
-                            10 KG
+                            {{ thisWeightTotal(data.products) }} KG
                         </template>
                     </Column>
-                    <Column header="Date" filterField="date" headerStyle="width:10%; min-width:6rem;">
+                    <Column header="Date" headerStyle="width:10%; min-width:6rem;">
                         <template #body="{ data }">
-                            {{ formatDate(data.date) }}
+                            {{ formatDate(data.createdAt) }}
                         </template>
                     </Column>
                     <Column header="Numéro de suivi" headerStyle="width:15%; min-width:6rem;">
                         <template #body="{ data }">
-                            {{ formatCurrency(data.balance) }}
+                            {{ data.tracking }}
                         </template>
                     </Column>
-                    <Column header="Statut" headerStyle="width:10%; min-width:6rem;">
+                    <Column header="Statut" headerStyle="width:13%; min-width:6rem;">
                         <template #body="{ data }">
-                            <span :class="'customer-badge status-' + data.status">{{ data.status }}</span>
+                            <span v-if="!data.tracking" class="customer-badge status-proposal">Préparation</span>
+                            <span v-if="data.tracking" class="customer-badge status-qualified">Expédié</span>
                         </template>
                     </Column>
                     <Column bodyClass="text-center" headerStyle="width:12%; min-width:8rem;">
-                        <template #body="slotProps">
-                            <Button icon="pi pi-truck" class="p-button-rounded p-button-primary" @click="openNew" />
+                        <template #body="{ data }">
+                            <Button v-if="!data.tracking" icon="pi pi-cog" class="p-button-rounded p-button-primary" @click="openNew" />
+                            <a :href="`https://www.laposte.fr/outils/suivre-vos-envois?code=${data.tracking}`" target="_blank" v-if="data.tracking" class="p-button p-button-rounded p-button-success"><i class="pi pi-truck"></i></a>
                         </template>
                     </Column>
                 </DataTable>
