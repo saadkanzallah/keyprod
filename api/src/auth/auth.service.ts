@@ -26,7 +26,7 @@ export class AuthService {
 
         // ** Save user in DB
 
-        const newUser =await this.prisma.user.create({
+        const newUser = await this.prisma.user.create({
             data: { firstname, lastname, email, password: hash}
         });
         
