@@ -44,6 +44,7 @@ model Product {
   orderId   String?
   parcel    Parcel?   @relation(fields: [parcelId], references: [id])
   parcelId  String?
+  @@unique([category, version, code])
 }
 
 model Order {
