@@ -3,8 +3,9 @@ import { faker } from '@faker-js/faker';
 
 const prisma  = new PrismaClient();
 const roles = ['ADMIN', 'AGENT', 'USER'];
-const productCount = 10;
-const OrderCount = 5;
+const productCount = 20;
+const orderCount = 10;
+const parcelCount = 8;
 const fakerUser = (role: string): any => ({
     email: role.toLowerCase() + '@keyprod.fr',
     password: 'XXXXXX', // TODO : hash password
@@ -13,23 +14,50 @@ const fakerUser = (role: string): any => ({
     role
 });
 
-const fakerProduct = (orderId: string = null): any => ({
+const fakerProduct = (orderId: string = null, parcelId: string = null): any => ({
     category: faker.helpers.arrayElement(['KEYNETIC', 'KEYVIBE']),
     version: 'V' + faker.number.int({ min: 1, max: 9 }),
     code: faker.string.alphanumeric({casing: 'upper', length: 6}),
     weight: faker.number.int({ min: 1, max: 100 }),
-    orderId
+    orderId,
+    parcelId,
 });
 
 const fakerOrder = (): any => ({
-    client: faker.person.fullName() ,
+    client: faker.person.fullName(),
     code: faker.string.alphanumeric({casing: 'upper', length: 6}),
 });
 
-const fakerProductsOrder = async (total: number, orderId: string): Promise<any> => {
+const fakerParcel = (order: any, withTracking: boolean = false): any => ({
+    label: faker.person.jobTitle(),
+    code: faker.string.alphanumeric({casing: 'upper', length: 6}),
+    tracking: withTracking ? faker.string.alphanumeric({casing: 'upper', length: 6}) : null,
+    orderId: order.id,
+    //order
+});
+
+const fakerProductsOrder = async (total: number, order: any): Promise<any> => {
     for (let i = 1; i <= total; i++) {
-        console.log(`Seeding Product ${i} / Order ${orderId}...`);
-        await prisma.product.create({ data: fakerProduct(orderId) });
+        console.log(`Seeding Product ${i} / Order ${order.id}...`);
+        await prisma.product.create({ data: fakerProduct(order.id) });
+
+        if (i <= parcelCount) {
+            /// --------- Parcels ---------------
+            console.log(`Seeding ${parcelCount} Parcels...`);
+            for (let j = 1; j <= parcelCount; j++) {
+                console.log(`Seeding Parcel ${j} / Order ${order.id}...`);
+                const newParcel = await prisma.parcel.create({ data: fakerParcel(order, (i % 3 === 0)) });
+                const totalParcel = faker.number.int({ min: 1, max: 9 });
+                fakerProductsParcel(totalParcel, order.id, newParcel.id);
+            }
+        }
+    }
+}
+
+const fakerProductsParcel = async (total: number, orderId: string, parcelId: string): Promise<any> => {
+    for (let i = 1; i <= total; i++) {
+        console.log(`Seeding Product ${i} / Parcel ${parcelId}...`);
+        await prisma.product.create({ data: fakerProduct(orderId, parcelId) });
     }
 }
     
@@ -40,6 +68,8 @@ async function main() {
     await prisma.product.deleteMany();
     console.log(`Clearing Product table...`);
     await prisma.order.deleteMany();
+    console.log(`Clearing Parcel table...`);
+    await prisma.parcel.deleteMany();
     console.log(`Seeding Start...`);
     /// --------- Users ---------------
     console.log(`Seeding Users...`);
@@ -56,12 +86,12 @@ async function main() {
     }
 
     /// --------- Orders ---------------
-    console.log(`Seeding ${OrderCount} Orders...`);
-    for (let i = 1; i <= OrderCount; i++) {
+    console.log(`Seeding ${orderCount} Orders...`);
+    for (let i = 1; i <= orderCount; i++) {
         console.log(`Seeding Order ${i}...`);
         const newOrder = await prisma.order.create({ data: fakerOrder() });
         const totalOrder = faker.number.int({ min: 1, max: 9 });
-        fakerProductsOrder(totalOrder, newOrder.id);
+        fakerProductsOrder(totalOrder, newOrder);
     }
 
     console.log(`Seeding End...`);
