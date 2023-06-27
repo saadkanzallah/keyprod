@@ -1,13 +1,14 @@
 <script setup>
 import { FilterMatchMode } from 'primevue/api';
 import { ref, computed, onMounted, onBeforeMount } from 'vue';
-import ProductService from '../../service/ProductService';
 import { useToast } from 'primevue/usetoast';
+import OrderService from '../../service/OrderService';
+import { useRoute } from 'vue-router';
 
 const toast = useToast();
 
-const dropdownItem = ref(null);
 const producCode = ref(null);
+const order = ref(null);
 const products = ref([]);
 const deleteProductDialog = ref(false);
 const deleteProductsDialog = ref(false);
@@ -21,13 +22,17 @@ const statuses = ref([
     { label: 'Livrée', value: 'outofstock' }
 ]);
 
-const productService = new ProductService();
+const orderService = new OrderService();
 
 onBeforeMount(() => {
     initFilters();
 });
 onMounted(() => {
-    productService.getProducts().then((data) => (products.value = data));
+    const route = useRoute();
+    orderService.getFullOrder(route.params.id).then((data) => {
+        order.value = data;
+        products.value = data.products ?? [];
+    });
 });
 const formatCurrency = (value) => {
     return value.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -54,7 +59,7 @@ const initFilters = () => {
         global: { value: null, matchMode: FilterMatchMode.CONTAINS }
     };
 };
-const saveProduct = () => {
+const searchProduct = () => {
     if (producCode && producCode.value) {
         if (producCode.value === 'saad') {
             product.value.id = createId();
@@ -80,22 +85,14 @@ const createId = () => {
     }
     return id;
 };
-const lastYearTotal = computed(() => {
+
+const thisWeightTotal = computed(() => {
     let total = 0;
     for(let product of products.value) {
-        total += product.price;
+        total += product.weight;
     }
 
-    return formatCurrency(total);
-});
-
-const thisYearTotal = computed(() => {
-    let total = 0;
-    for(let product of products.value) {
-        total += product.price;
-    }
-
-    return formatCurrency(total);
+    return total + ' KG';
 });
 </script>
 
@@ -103,8 +100,8 @@ const thisYearTotal = computed(() => {
     <div class="grid">
         <div class="col-12">
             <div class="card">
-                <h5>Détails de la commande #{{ $route.params.id }}</h5>
-                <h6>Client: <b>Client 1</b></h6>
+                <h5>Détails de la commande #{{ order?.code }}</h5>
+                <h6>Client: <b>{{ order?.client }}</b></h6>
                 <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
             </div>
         </div>
@@ -115,7 +112,7 @@ const thisYearTotal = computed(() => {
                 <div class="p-fluid formgrid grid">
                     <div class="field col-12 md:col-12">
                         <span class="p-input-icon-right">
-                            <InputText v-model="producCode" v-on:keyup.enter="saveProduct" type="text" class="p-inputtext-lg" placeholder="Scanner le QrCode du produit" />
+                            <InputText v-model="producCode" v-on:keyup.enter="searchProduct" type="text" class="p-inputtext-lg" placeholder="Scanner le QrCode du produit" />
                             <i class="pi pi-qrcode" />
                         </span>
                     </div>
@@ -159,32 +156,31 @@ const thisYearTotal = computed(() => {
                             {{ data.code }}
                         </template>
                     </Column>
-                    <Column field="code" header="Catégorie" headerStyle="width:30%; min-width:10rem;">
+                    <Column field="category" header="Catégorie" headerStyle="width:20%; min-width:10rem;">
                         <template #body="{ data }">
-                            <img :src="'/demo/images/avatar/ionibowcher.png'" width="32" style="vertical-align: middle" />
-                            <span style="margin-left: 0.5em; vertical-align: middle" class="image-text">{{ data.name }}</span>
+                            <img :src="`/${data.category}.png`" width="64" style="vertical-align: middle" />
+                            <span style="margin-left: 0.5em; vertical-align: middle" class="image-text">{{ data.category }}</span>
                         </template>
                     </Column>
                     <Column field="code" header="Version" headerStyle="width:15%; min-width:10rem;">
                         <template #body="{ data }">
-                            V{{ Math.floor(Math.random()* 10) + 1 }}
+                            {{ data.version }}
                         </template>
                     </Column>
-                    <Column field="price" header="Montant" headerStyle="width:15%; min-width:8rem;">
+                    <Column field="ref" header="Référence" headerStyle="width:30%; min-width:10rem;">
                         <template #body="{ data }">
-                            {{ formatCurrency(data.price) }}
+                            {{ data.category + '_' + data.version + '_' + data.code}}
                         </template>
                     </Column>
                     <Column field="price" header="Poids" headerStyle="width:15%; min-width:8rem;">
                         <template #body="{ data }">
-                            {{ Math.floor(Math.random()* 10) + 1 }} KG
+                            {{ data.weight }} KG
                         </template>
                     </Column>
                     <ColumnGroup type="footer">
                         <Row>
-                            <Column footer="Totals:" :colspan="4" footerStyle="text-align:right" />
-                            <Column :footer="lastYearTotal" />
-                            <Column :footer="thisYearTotal" />
+                            <Column footer="Poids total:" :colspan="5" footerStyle="text-align:right" />
+                            <Column :footer="thisWeightTotal" />
                         </Row>
                     </ColumnGroup>
                 </DataTable>
