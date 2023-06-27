@@ -14,6 +14,7 @@ export class ParcelsService {
     return this.prisma.parcel.findMany({
       include: {
         products: true,
+        order: true,
       },
     });
   }

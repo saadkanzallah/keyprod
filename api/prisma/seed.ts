@@ -3,9 +3,9 @@ import { faker } from '@faker-js/faker';
 
 const prisma  = new PrismaClient();
 const roles = ['ADMIN', 'AGENT', 'USER'];
-const productCount = 20;
-const orderCount = 10;
-const parcelCount = 8;
+const productCount = 10;
+const orderCount = 5;
+const parcelCount = 3;
 const fakerUser = (role: string): any => ({
     email: role.toLowerCase() + '@keyprod.fr',
     password: 'XXXXXX', // TODO : hash password
