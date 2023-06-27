@@ -11,11 +11,20 @@ export class OrdersService {
   }
 
   findAll() {
-    return this.prisma.order.findMany();
+    return this.prisma.order.findMany({
+      include: {
+        products: true,
+      },
+    });
   }
 
   findOne(id: string) {
-    return this.prisma.order.findUnique({where : { id }});
+    return this.prisma.order.findUnique({
+      where : { id },
+      include: {
+        products: true,
+      },
+    });
   }
 
   update(id: number, updateOrderDto: UpdateOrderDto) {
