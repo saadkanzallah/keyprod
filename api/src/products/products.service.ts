@@ -20,6 +20,12 @@ export class ProductsService {
     return this.prisma.product.findUnique({where : { id }});
   }
 
+  search(code: string) {
+    return this.prisma.product.findFirst({
+      where : { code }
+    });
+  }
+
   update(id: number, updateProductDto: UpdateProductDto) {
     return `This action updates a #${id} product`;
   }
