@@ -60,7 +60,7 @@ model Order {
 model Parcel {
   id        String    @id  @default(cuid())
   code      String    @db.VarChar(50)
-  tracking  String    @db.VarChar(50)
+  tracking  String?   @db.VarChar(50)
   label     String    @db.VarChar(100)
   comment   String?   @db.Text()
   createdAt DateTime  @default(now())
