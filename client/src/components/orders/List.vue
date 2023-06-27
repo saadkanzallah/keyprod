@@ -1,16 +1,16 @@
 <script setup>
 import { FilterMatchMode } from 'primevue/api';
 import { ref, onMounted, onBeforeMount } from 'vue';
-import ProductService from '../../service/ProductService';
+import OrderService from '../../service/OrderService';
 import { useToast } from 'primevue/usetoast';
 
 const toast = useToast();
 
-const products = ref(null);
-const deleteProductDialog = ref(false);
-const deleteProductsDialog = ref(false);
-const product = ref({});
-const selectedProducts = ref(null);
+const orders = ref(null);
+const deleteOrderDialog = ref(false);
+const deleteOrdersDialog = ref(false);
+const order = ref({});
+const selectedOrders = ref(null);
 const dt = ref(null);
 const filters = ref({});
 const statuses = ref([
@@ -19,36 +19,43 @@ const statuses = ref([
     { label: 'Livrée', value: 'outofstock' }
 ]);
 
-const productService = new ProductService();
+const orderService = new OrderService();
 
 onBeforeMount(() => {
     initFilters();
 });
 onMounted(() => {
-    productService.getProducts().then((data) => (products.value = data));
+    orderService.getOrders().then((data) => (orders.value = data)).then((d) => {console.log(d)});
 });
 const formatCurrency = (value) => {
     return value.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
 };
 
-const deleteProduct = () => {
-    products.value = products.value.filter((val) => val.id !== product.value.id);
-    deleteProductDialog.value = false;
-    product.value = {};
-    toast.add({ severity: 'success', summary: 'Successful', detail: 'Product Deleted', life: 3000 });
+const deleteOrder = () => {
+    orders.value = orders.value.filter((val) => val.id !== order.value.id);
+    deleteOrderDialog.value = false;
+    order.value = {};
+    toast.add({ severity: 'success', summary: 'Successful', detail: 'Order Deleted', life: 3000 });
 };
 
-const deleteSelectedProducts = () => {
-    products.value = products.value.filter((val) => !selectedProducts.value.includes(val));
-    deleteProductsDialog.value = false;
-    selectedProducts.value = null;
-    toast.add({ severity: 'success', summary: 'Successful', detail: 'Products Deleted', life: 3000 });
+const deleteSelectedOrders = () => {
+    orders.value = orders.value.filter((val) => !selectedOrders.value.includes(val));
+    deleteOrdersDialog.value = false;
+    selectedOrders.value = null;
+    toast.add({ severity: 'success', summary: 'Successful', detail: 'Orders Deleted', life: 3000 });
 };
 
 const initFilters = () => {
     filters.value = {
         global: { value: null, matchMode: FilterMatchMode.CONTAINS }
     };
+};
+const formatDate = (value) => {
+    return (new Date(value)).toLocaleDateString('fr-FR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
 };
 </script>
 
@@ -70,8 +77,8 @@ const initFilters = () => {
                 <DataTable
                     ref="dt"
                     class="p-datatable-gridlines"
-                    :value="products"
-                    v-model:selection="selectedProducts"
+                    :value="orders"
+                    v-model:selection="selectedOrders"
                     dataKey="id"
                     :paginator="true"
                     :rows="10"
@@ -92,81 +99,75 @@ const initFilters = () => {
                     </template>
 
                     <Column field="code" header="N° Commande" :sortable="true" headerStyle="width:14%; min-width:10rem;">
-                        <template #body="slotProps">
+                        <template #body="{ data }">
                             <span class="p-column-title">N° Commande</span>
-                            {{ slotProps.data.code }}
+                            #{{ data.code }}
                         </template>
                     </Column>
                     <Column field="date" header="Date" :sortable="true" headerStyle="width:12%; min-width:10rem;">
-                        <template #body="slotProps">
+                        <template #body="{ data }">
                             <span class="p-column-title">Date</span>
-                            {{ new Date().toLocaleDateString() }}
+                            {{ formatDate(data.createdAt) }}
                         </template>
                     </Column>
-                    <Column field="name" header="Client" :sortable="true" headerStyle="min-width:10rem;">
-                        <template #body="slotProps">
+                    <Column field="client" header="Client" :sortable="true" headerStyle="min-width:10rem;">
+                        <template #body="{ data }">
                             <span class="p-column-title">Client</span>
-                            {{ slotProps.data.name }}
+                            {{ data.client }}
                         </template>
                     </Column>
                     <Column field="price" header="Nbr. de produits" :sortable="true" headerStyle="width:13%; min-width:8rem;">
-                        <template #body="slotProps">
+                        <template #body="{ data }">
                             <span class="p-column-title">Nbr. de produits</span>
                             {{ Math.floor(Math.random()* 10) + 1 }}
                         </template>
                     </Column>
                     <Column field="price" header="Nbr. de colis" :sortable="true" headerStyle="width:12%; min-width:8rem;">
-                        <template #body="slotProps">
+                        <template #body="{ data }">
                             <span class="p-column-title">Nbr. de colis</span>
                             {{ Math.floor(Math.random()* 10) + 1 }}
                         </template>
                     </Column>
-                    <Column field="price" header="Montant" :sortable="true" headerStyle="width:10%; min-width:8rem;">
-                        <template #body="slotProps">
-                            <span class="p-column-title">Montant</span>
-                            {{ formatCurrency(slotProps.data.price) }}
-                        </template>
-                    </Column>
                     <Column field="inventoryStatus" header="Statut" :sortable="true" headerStyle="width:10%; min-width:10rem;">
-                        <template #body="slotProps">
+                        <template #body="{ data }">
                             <span class="p-column-title">Statut</span>
-                            <span :class="'product-badge status-' + (slotProps.data.inventoryStatus ? slotProps.data.inventoryStatus.toLowerCase() : '')">{{ slotProps.data.inventoryStatus }}</span>
+                            <span :class="'product-badge status-lowstock'">En cours</span>
                         </template>
                     </Column>
                     <Column bodyClass="text-center" headerStyle="width:12%; min-width:8rem;">
-                        <template #body="slotProps">
-                            <RouterLink :to="{ name: 'viewOrder', params: { id: slotProps.data.id }}" class="p-button p-button-rounded p-button-info mr-2">
+                        <template #body="{ data }">
+                            <RouterLink :to="{ name: 'viewOrder', params: { id: data.id }}" class="p-button p-button-rounded p-button-info mr-2">
                                 <i class="pi pi-eye"></i>
                             </RouterLink>
-                            <RouterLink :to="{ name: 'boxOrder', params: { id: slotProps.data.id }}" class="p-button p-button-rounded p-button-primary mr-2">
+                            <RouterLink :to="{ name: 'boxOrder', params: { id: data.id }}" class="p-button p-button-rounded p-button-primary mr-2">
                                 <i class="pi pi-box"></i>
                             </RouterLink>
                         </template>
                     </Column>
                 </DataTable>
 
-                <Dialog v-model:visible="deleteProductDialog" :style="{ width: '450px' }" header="Confirm" :modal="true">
+                <Dialog v-model:visible="deleteOrderDialog" :style="{ width: '450px' }" header="Confirm" :modal="true">
                     <div class="flex align-items-center justify-content-center">
                         <i class="pi pi-exclamation-triangle mr-3" style="font-size: 2rem" />
-                        <span v-if="product"
-                            >Are you sure you want to delete <b>{{ product.name }}</b
+                        <span v-if="order"
+                            >Are you sure you want to delete <b>{{ order.name }}</b
                             >?</span
                         >
                     </div>
                     <template #footer>
-                        <Button label="No" icon="pi pi-times" class="p-button-text" @click="deleteProductDialog = false" />
-                        <Button label="Yes" icon="pi pi-check" class="p-button-text" @click="deleteProduct" />
+                        <Button label="No" icon="pi pi-times" class="p-button-text" @click="deleteOrderDialog = false" />
+                        <Button label="Yes" icon="pi pi-check" class="p-button-text" @click="deleteOrder" />
                     </template>
                 </Dialog>
 
-                <Dialog v-model:visible="deleteProductsDialog" :style="{ width: '450px' }" header="Confirm" :modal="true">
+                <Dialog v-model:visible="deleteOrdersDialog" :style="{ width: '450px' }" header="Confirm" :modal="true">
                     <div class="flex align-items-center justify-content-center">
                         <i class="pi pi-exclamation-triangle mr-3" style="font-size: 2rem" />
-                        <span v-if="product">Are you sure you want to delete the selected products?</span>
+                        <span v-if="order">Are you sure you want to delete the selected orders?</span>
                     </div>
                     <template #footer>
-                        <Button label="No" icon="pi pi-times" class="p-button-text" @click="deleteProductsDialog = false" />
-                        <Button label="Yes" icon="pi pi-check" class="p-button-text" @click="deleteSelectedProducts" />
+                        <Button label="No" icon="pi pi-times" class="p-button-text" @click="deleteOrdersDialog = false" />
+                        <Button label="Yes" icon="pi pi-check" class="p-button-text" @click="deleteSelectedOrders" />
                     </template>
                 </Dialog>
             </div>
