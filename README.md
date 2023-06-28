@@ -1,4 +1,4 @@
-# keyProd 4.0
+# KeyProd 4.0
 un outil de nouvelle génération pour la gestion et l’expédition des produits KeyNetic et KeyVIbes -  Keyprod
 
 ## The Stack
